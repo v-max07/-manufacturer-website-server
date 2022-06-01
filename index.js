@@ -1,3 +1,4 @@
+
 const express = require('express');
 const app = express();
 var cors = require('cors');
@@ -6,7 +7,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 require('dotenv').config()
 
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
@@ -76,14 +77,44 @@ async function run() {
         })
 
         //order
-        
+
 
 
         // for order collection 
-        app.post('/order', async (req, res) => {
+        app.put('/order/:name', async (req, res) => {
             const booking = req.body;
-            const result = await bookingCollection.insertOne(booking);
-            res.send(result)
+            const name = req.params.name;
+            const filter = { name: name };
+            const movie = await bookingCollection.findOne(filter);
+            const options = { upsert: true };
+            if (movie?.quantity) {
+                const updateDoc = {
+                    $set: {
+                        userName: booking.userName,
+                        email: booking.email,
+                        name: booking.name,
+                        quantity: movie?.quantity + booking.quantity,
+                        per_price: booking.per_price,
+                    }
+                }
+                const result = await bookingCollection.updateOne(filter, updateDoc, options);
+                res.send(result)
+            }
+            else {
+                const updateDoc = {
+                    $set: {
+                        userName: booking.userName,
+                        email: booking.email,
+                        name: booking.name,
+                        quantity: booking.quantity,
+                        per_price: booking.per_price,
+                    }
+                }
+                const ami = await bookingCollection.updateOne(filter, updateDoc, options);
+                res.send(ami)
+            }
+
+
         });
 
         // get all orders
@@ -93,6 +124,7 @@ async function run() {
             const result = await cursor.toArray();
             res.send(result)
         });
+        // app.delete('order/:')
 
         // get order by user email
         app.get('/order/:email', async (req, res) => {
@@ -103,6 +135,13 @@ async function run() {
             res.send(cursor)
 
         });
+        app.delete('/order/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await bookingCollection.deleteOne(query);
+            res.send(result)
+
+        })
 
         // get all users
         app.get('/users', async (req, res) => {
